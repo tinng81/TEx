@@ -1,7 +1,11 @@
 #include <unistd.h>
 #include <termios.h>
+#include <unistd.h>
+
+struct termios orig_termios;
 
 void enableRawMode();
+void disableRawMode();
 
 int main(int argc, char const *argv[])
 {
@@ -15,8 +19,15 @@ int main(int argc, char const *argv[])
 }
 
 void enableRawMode() {
-  struct termios raw;
-  tcgetattr(STDIN_FILENO, &raw);
+  tcgetattr(STDIN_FILENO, &orig_termios);
+  atexit(disableRawMode);
+
+  struct termios raw = orig_termios;
   raw.c_lflag &= ~(ECHO);
+  
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+void disableRawMode() {
+  tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 }
