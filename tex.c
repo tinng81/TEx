@@ -26,6 +26,7 @@ void terminate(const char *);
 char texReadKey();
 void texProcessKey();
 void texDispRefresh();
+void texVimTildes();
 
 /**
  * @brief main
@@ -129,7 +130,7 @@ void texProcessKey(){
         case CTRL_KEY('q'):
             write(STDIN_FILENO,"\x1b[2J",4);
             write(STDIN_FILENO,"\x1b[1;1H",3);
-            
+
             exit(0);
             break;
         default:
@@ -148,4 +149,21 @@ void texProcessKey(){
 void texDispRefresh(){
     write(STDIN_FILENO,"\x1b[2J",4);
     write(STDIN_FILENO,"\x1b[1;1H",3);
+
+    texVimTildes();
+
+    write(STDIN_FILENO,"\x1b[1;1H",3);
+}
+
+/**
+ * @brief Output Handling
+ * @details Vimify with tildes at each line
+ * @args nRows: Arbitrary no. of tildes
+ */
+void texVimTildes(){
+    int i, nRows = 24;
+    for (i = 0; i < nRows; ++i)
+    {
+        write(STDIN_FILENO,"~\r\n",3);
+    }
 }
