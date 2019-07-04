@@ -15,7 +15,14 @@
 */
 #define CTRL_KEY(k) ( k & 0x1f )
 
-struct termios orig_termios;
+/**
+ * @brief Terminal Struct
+ * @details Configuration Data
+ */
+struct texConfig{
+    struct termios orig_termios;
+};
+struct texConfig conf; // Global scope
 
 /**
  * @brief Function Prototypes
@@ -51,14 +58,14 @@ int main(int argc, char const *argv[])
  */
 void enableRawMode() {
     // tcgetattr(STDIN_FILENO, &orig_termios);
-    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1)
+    if (tcgetattr(STDIN_FILENO, &conf.orig_termios) == -1)
     {
         terminate("tcgetattr");
     }
 
     atexit(disableRawMode);
 
-    struct termios raw = orig_termios;
+    struct termios raw = conf.orig_termios;
     raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);  
     raw.c_oflag &= ~(OPOST); 
     raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
@@ -81,11 +88,10 @@ void enableRawMode() {
 void disableRawMode() {
   // tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 
-  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1)
+  if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &conf.orig_termios) == -1)
   {
       terminate("tcsetattr");
   }
-
 }
 
 /**
