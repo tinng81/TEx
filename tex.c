@@ -9,12 +9,14 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <string.h>
 
 /**
  * @brief Define Keys
  * @details <Ctrl-k>
 */
 #define CTRL_KEY(k) ( k & 0x1f )
+#define BUF_INIT {NULL, 0}
 
 /**
  * @brief Terminal Struct
@@ -26,6 +28,9 @@ struct texConfig{
     struct termios orig_termios;
 };
 struct texConfig conf; // Global scope
+struct memBuf{
+    char *b;
+};
 
 /**
  * @brief Function Prototypes
@@ -40,6 +45,8 @@ void texVimTildes();
 int getWindowSize(int *, int *);
 void texDispSize();
 int getCursorPosition(int *, int *);
+void memBufAppend(struct memBuf *, const char *, int );
+void memBufFree(struct memBuf *);
 
 /**
  * @brief main
@@ -170,6 +177,15 @@ int getWindowSize(int *rs, int *cs){
     }
 }
 
+/**
+ * @brief Terminal API
+ * @details Find Cursor Position
+ * 
+ * @param rs Rows
+ * @param cs Columns
+ * 
+ * @return valid/invalid: 0/-1
+ */
 int getCursorPosition(int *rs, int *cs){
     char buffer[32];
     unsigned int i = 0;
@@ -207,6 +223,37 @@ int getCursorPosition(int *rs, int *cs){
     return 0;
 }
 
+/**
+ * @brief Parser
+ * @details Append String
+ * 
+ * @param memBuf Dynamic-string Struct
+ * @param s Input String
+ * @param len String Length
+ */
+void memBufAppend(struct memBuf *abuf, const char *s, int len){
+    char *new = realloc(abuf -> b, abuf -> len + len);
+
+    if (new == NULL)
+    {
+        return;
+    }
+
+    memcpy(&new[abuf->len], s, len);
+    abuf -> b = new;
+    abuf -> len += len;
+}
+
+/**
+ * @brief Parser
+ * @details Append String
+ * 
+ * @param memBuf Dynamic-string Struct
+ */
+void memBufFree(struct memBuf *abuf){
+    free(abuf->b);
+}
+
 
 /**
  * @brief Input Handling
@@ -236,12 +283,18 @@ void texProcessKey(){
  * @args Cursor Position <1;1H>: Row 1 ; Col 1
  */
 void texDispRefresh(){
-    write(STDIN_FILENO,"\x1b[2J",4);
-    write(STDIN_FILENO,"\x1b[1;1H",3);
+    struct memBuf ab = BUF_INIT;
 
-    texVimTildes();
 
-    write(STDIN_FILENO,"\x1b[1;1H",3);
+    memBufAppend(&ab,"\x1b[2J",4);
+    memBufAppend(&ab,"\x1b[1;1H",3);
+
+    texVimTildes(&ab);
+
+    memBufAppend(&ab,"\x1b[1;1H",3);
+
+    write(STDIN_FILENO, ab.b, ab.len);
+    memBufFree(&ab);
 }
 
 /**
@@ -249,15 +302,15 @@ void texDispRefresh(){
  * @details Vimify with tildes at each line
  * @args nRows: Arbitrary no. of tildes
  */
-void texVimTildes(){
+void texVimTildes(struct memBuf *ab){
     int i;
     for (i = 0; i < conf.dispRows; ++i)
     {
-        write(STDIN_FILENO,"~",1);
+        memBufAppend(ab, "~", 1);
 
         if (i < conf.dispRows - 1)
         {
-            write(STDIN_FILENO, "\r\n",2);
+            memBufAppend(ab, "\r\n", 2);
         }
     }
 }
