@@ -30,6 +30,7 @@ struct texConfig{
 struct texConfig conf; // Global scope
 struct memBuf{
     char *b;
+    int len;
 };
 
 /**
@@ -285,13 +286,13 @@ void texProcessKey(){
 void texDispRefresh(){
     struct memBuf ab = BUF_INIT;
 
-
-    memBufAppend(&ab,"\x1b[2J",4);
+    memBufAppend(&ab,"\x1b[?25l",4);
     memBufAppend(&ab,"\x1b[1;1H",3);
 
     texVimTildes(&ab);
 
     memBufAppend(&ab,"\x1b[1;1H",3);
+    memBufAppend(&ab,"\x1b[?25l",4);
 
     write(STDIN_FILENO, ab.b, ab.len);
     memBufFree(&ab);
@@ -307,6 +308,7 @@ void texVimTildes(struct memBuf *ab){
     for (i = 0; i < conf.dispRows; ++i)
     {
         memBufAppend(ab, "~", 1);
+        memBufAppend(ab, "\x1b[K", 3);
 
         if (i < conf.dispRows - 1)
         {
