@@ -1,4 +1,6 @@
-#include <unistd.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -31,7 +33,8 @@ void enableRawMode() {
   atexit(disableRawMode);
 
   struct termios raw = orig_termios;
-  raw.c_lflag &= ~(ECHO | ICANON | ISIG);
+  raw.c_iflag &= ~(IXON);  
+  raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
   
   tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
