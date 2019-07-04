@@ -253,6 +253,11 @@ void texVimTildes(){
     int i;
     for (i = 0; i < conf.dispRows; ++i)
     {
-        write(STDIN_FILENO,"~\r\n",3);
+        write(STDIN_FILENO,"~",1);
+
+        if (i < conf.dispRows - 1)
+        {
+            write(STDIN_FILENO, "\r\n",2);
+        }
     }
 }
