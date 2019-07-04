@@ -35,19 +35,19 @@ int main(int argc, char const *argv[])
 }
 
 void enableRawMode() {
-  tcgetattr(STDIN_FILENO, &orig_termios);
-  atexit(disableRawMode);
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    atexit(disableRawMode);
 
-  struct termios raw = orig_termios;
-  raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);  
-  raw.c_oflag &= ~(OPOST); 
-  raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
-  raw.c_cflag |= (CS8);
+    struct termios raw = orig_termios;
+    raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);  
+    raw.c_oflag &= ~(OPOST); 
+    raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
+    raw.c_cflag |= (CS8);
 
-  raw.c_cc[VMIN] = 0;
-  raw.c_cc[VTIME] = 10; // 10 * 100 msec = 10s timeout
-  
-  tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+    raw.c_cc[VMIN] = 0;
+    raw.c_cc[VTIME] = 10; // 10 * 100 msec = 10s timeout
+
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
 }
 
 void disableRawMode() {
