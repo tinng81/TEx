@@ -25,6 +25,7 @@ void disableRawMode();
 void terminate(const char *);
 char texReadKey();
 void texProcessKey();
+void texDispRefresh();
 
 /**
  * @brief main
@@ -36,6 +37,7 @@ int main(int argc, char const *argv[])
     enableRawMode();
 
     while(1){
+        texDispRefresh();
         texProcessKey();
     }
 
@@ -128,4 +130,14 @@ void texProcessKey(){
             printf("%d [%c]\r\n", c, c);
             break;
     }
+}
+
+/**
+ * @brief Output Handling
+ * @details Refresh  Display
+ * @args Escape <\x1b> + <[>: <esc> sequence
+ * @args Erase-in-Display <2J>: clear all mode (2)
+ */
+void texDispRefresh(){
+    write(STDIN_FILENO,"\x1b[2J",4);
 }
