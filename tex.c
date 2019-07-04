@@ -39,6 +39,7 @@ void texDispRefresh();
 void texVimTildes();
 int getWindowSize(int *, int *);
 void texDispSize();
+int getCursorPosition(int *, int *);
 
 /**
  * @brief main
@@ -154,9 +155,13 @@ char texReadKey(){
 int getWindowSize(int *rs, int *cs){
     struct winsize sWinSize;
 
-    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &sWinSize) == -1 | sWinSize.ws_col == 0)
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &sWinSize) == -1 || sWinSize.ws_col == 0)
     {
-        return -1;
+        if (write(STDIN_FILENO,"\x1b[999C\x1b[999B",12) != 12)
+        {
+            return -1;
+        }
+        return getCursorPosition(rs, cs);
     }
     else {
         *cs = sWinSize.ws_col;
@@ -164,6 +169,44 @@ int getWindowSize(int *rs, int *cs){
         return 0;
     }
 }
+
+int getCursorPosition(int *rs, int *cs){
+    char buffer[32];
+    unsigned int i = 0;
+
+    if (write(STDIN_FILENO,"\x1b[6n",4) != 4 )
+    {
+        return -1;
+    }
+
+    while(i < sizeof(buffer) - 1){
+        if (read(STDIN_FILENO, &buffer[i], 1) != 1) 
+        {
+            break;
+        }
+
+        if (buffer[i] == 'R')
+        {
+            break;
+        }
+        i++;
+    }
+
+    buffer[i] = '\0';
+
+    if (buffer[0] != '\x1b' || buffer[1] != '[')    
+    {
+        return -1;
+    }
+
+    if (sscanf(&buffer[2], "%d;%d", rs, cs) != 2)
+    {
+        return -1;
+    }
+
+    return 0;
+}
+
 
 /**
  * @brief Input Handling
