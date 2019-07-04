@@ -8,6 +8,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 
 /**
  * @brief Define Keys
@@ -20,6 +21,8 @@
  * @details Configuration Data
  */
 struct texConfig{
+    int dispRows;
+    int dispCols;
     struct termios orig_termios;
 };
 struct texConfig conf; // Global scope
@@ -34,6 +37,8 @@ char texReadKey();
 void texProcessKey();
 void texDispRefresh();
 void texVimTildes();
+int getWindowSize(int *, int *);
+void texDispSize();
 
 /**
  * @brief main
@@ -43,6 +48,7 @@ int main(int argc, char const *argv[])
 {
 
     enableRawMode();
+    texDispSize();
 
     while(1){
         texDispRefresh();
@@ -50,6 +56,17 @@ int main(int argc, char const *argv[])
     }
 
     return 0;
+}
+
+/**
+ * @brief Initialize
+ * @details Invoke size info and adjust display
+ */
+void texDispSize(){
+    if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
+    {
+        terminate("getWindowSize");
+    }
 }
 
 /**
@@ -126,6 +143,29 @@ char texReadKey(){
 }
 
 /**
+ * @brief Terminal API
+ * @details Call Window Size
+ * 
+ * @param rs Rows
+ * @param cs Columns
+ * 
+ * @return struct winsize {row, col}
+ */
+int getWindowSize(int *rs, int *cs){
+    struct winsize sWinSize;
+
+    if (ioctl(STDIN_FILENO, TIOCGWINSZ, &sWinSize) == -1 | sWinSize.ws_col == 0)
+    {
+        return -1;
+    }
+    else {
+        *cs = sWinSize.ws_col;
+        *rs = sWinSize.ws_row;
+        return 0;
+    }
+}
+
+/**
  * @brief Input Handling
  * @details Comprise keystrokes
  */
@@ -167,8 +207,8 @@ void texDispRefresh(){
  * @args nRows: Arbitrary no. of tildes
  */
 void texVimTildes(){
-    int i, nRows = 24;
-    for (i = 0; i < nRows; ++i)
+    int i;
+    for (i = 0; i < conf.dispRows; ++i)
     {
         write(STDIN_FILENO,"~\r\n",3);
     }
