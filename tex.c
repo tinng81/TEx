@@ -94,6 +94,9 @@ void disableRawMode() {
  * @param s Error Message
  */
 void terminate(const char *s){
+    write(STDIN_FILENO,"\x1b[2J",4);
+    write(STDIN_FILENO,"\x1b[1;1H",3);
+
     perror(s);
     exit(1);
 }
@@ -124,6 +127,9 @@ void texProcessKey(){
 
     switch(c){
         case CTRL_KEY('q'):
+            write(STDIN_FILENO,"\x1b[2J",4);
+            write(STDIN_FILENO,"\x1b[1;1H",3);
+            
             exit(0);
             break;
         default:
@@ -137,7 +143,9 @@ void texProcessKey(){
  * @details Refresh  Display
  * @args Escape <\x1b> + <[>: <esc> sequence
  * @args Erase-in-Display <2J>: clear all mode (2)
+ * @args Cursor Position <1;1H>: Row 1 ; Col 1
  */
 void texDispRefresh(){
     write(STDIN_FILENO,"\x1b[2J",4);
+    write(STDIN_FILENO,"\x1b[1;1H",3);
 }
