@@ -119,9 +119,13 @@ char texReadKey(){
  */
 void texProcessKey(){
     char c = texReadKey();
+
     switch(c){
         case CTRL_KEY('q'):
             exit(0);
+            break;
+        default:
+            printf("%d [%c]\r\n", c, c);
             break;
     }
 }
