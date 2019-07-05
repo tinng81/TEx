@@ -460,6 +460,10 @@ void texNavCursor(int key){
             {
                 conf.cur_x++;
             }
+            else if (row && conf.cur_x == row->size) {
+                ++conf.cur_y;
+                conf.cur_x = 0;
+            }
             break;
 
     }
