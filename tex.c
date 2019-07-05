@@ -44,6 +44,7 @@ struct texConfig {
     int dispCols;
     int cur_x;
     int cur_y;
+    int ren_x;
     int n_rows;
     int off_row;
     int off_col;
@@ -90,6 +91,7 @@ void editorOpen(char *);
 void editorAppend(char *, size_t );
 void editorScroll();
 void editorUpdate(erow *);
+int utilCur2Ren(erow *, int );
 
 /**
  * @brief main
@@ -120,6 +122,7 @@ int main(int argc, char const *argv[])
 void texDispInit(){
     conf.cur_x = 0;
     conf.cur_y = 0;
+    conf.ren_x = 0;
     conf.n_rows = 0;
     conf.row = NULL;
     conf.off_row = 0;
@@ -499,7 +502,7 @@ void texDispRefresh(){
 
     char cur_buf[64];
     snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", (conf.cur_y - conf.off_row) + 1,
-                                            (conf.cur_x - conf.off_col) + 1);
+                                            (conf.ren_x - conf.off_col) + 1);
     memBufAppend(&ab, cur_buf, strlen(cur_buf));
 
     memBufAppend(&ab,"\x1b[?25h",6);
@@ -624,6 +627,14 @@ void editorAppend(char *s, size_t len){
  * @details Scrolling feature
  */
 void editorScroll(){
+    conf.ren_x = 0;
+
+    if (conf.cur_y < conf.n_rows)
+    {
+        conf.ren_x = utilCur2Ren(&conf.row[conf.cur_y], conf.cur_x);
+    }
+
+
     if (conf.cur_y < conf.off_row)
     {
         conf.off_row = conf.cur_y;
@@ -634,17 +645,23 @@ void editorScroll(){
         conf.off_row = conf.cur_y - conf.dispRows + 1;
     }
 
-    if (conf.cur_x < conf.off_col)
+    if (conf.ren_x < conf.off_col)
     {
-        conf.off_col = conf.cur_x;
+        conf.off_col = conf.ren_x;
     }
 
-    if (conf.cur_x >= conf.off_col + conf.dispCols)
+    if (conf.ren_x >= conf.off_col + conf.dispCols)
     {
-        conf.off_col = conf.cur_x - conf.dispCols + 1;
+        conf.off_col = conf.ren_x - conf.dispCols + 1;
     }
 }
 
+/**
+ * @brief High-level Editor handling
+ * @details Rendering each char, watch for tab
+ * 
+ * @param row File Input line
+ */
 void editorUpdate(erow *row) {
     int tabs = 0;
     int i;
@@ -677,4 +694,18 @@ void editorUpdate(erow *row) {
     }
     row->render[idx] = '\0';
     row->ren_sz = idx;
+}
+
+int utilCur2Ren(erow *row, int cur_x) {
+    int ren_x = 0;
+    int i;
+    for (i = 0; i < cur_x; ++i)
+    {
+        if (row->chars[i] == '\t')
+        {
+            ren_x += (TABS_TO_SPACES - 1) - (ren_x % TABS_TO_SPACES);
+        }
+        ++ren_x;
+    }
+    return ren_x;
 }
