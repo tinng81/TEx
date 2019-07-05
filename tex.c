@@ -743,9 +743,20 @@ void editorSave() {
     char *buffer = utilRow2Str(&len);
 
     int fp = open(conf.file_name, O_RDWR | O_CREAT, 0644);
-    ftruncate(fp, len);
-    write(fp, buffer, len);
-    close(fp);
+
+    if (fp != -1)
+    {
+        if (ftruncate(fp, len) != -1)
+        {
+            if (write(fp, buffer, len) == len)
+            {
+                close(fp);
+                free(buffer);
+                return;
+            }
+        }
+        close(fp);
+    }
     free(buffer);
 }
 
