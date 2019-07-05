@@ -17,7 +17,7 @@
 */
 #define CTRL_KEY(k) ( k & 0x1f )
 #define BUF_INIT {NULL, 0}
-
+#define TEx_VERSION "0.0.1"
 /**
  * @brief Terminal Struct
  * @details Configuration Data
@@ -206,7 +206,7 @@ int getCursorPosition(int *rs, int *cs){
         {
             break;
         }
-        i++;
+        ++i;
     }
 
     buffer[i] = '\0';
@@ -304,15 +304,39 @@ void texDispRefresh(){
  * @args nRows: Arbitrary no. of tildes
  */
 void texVimTildes(struct memBuf *ab){
-    int i;
-    for (i = 0; i < conf.dispRows; ++i)
+      int i;
+  for (i = 0; i < conf.dispRows; ++i) {
+    if (i == conf.dispRows / 3) {
+      char wlcMsg[80];
+
+      int wlcLen = snprintf(wlcMsg, sizeof(wlcMsg),
+        "TEx Editor –– Version %s", TEx_VERSION);
+
+    if (wlcLen > conf.dispCols) 
+    {
+        wlcLen = conf.dispCols;
+    }
+
+    int padding = (conf.dispCols - wlcLen) / 2;
+    if (padding)
     {
         memBufAppend(ab, "~", 1);
-        memBufAppend(ab, "\x1b[K", 3);
-
-        if (i < conf.dispRows - 1)
-        {
-            memBufAppend(ab, "\r\n", 2);
-        }
+        --padding;
     }
+    while(--padding) {
+        memBufAppend(ab, " ", 1);
+    }
+
+    memBufAppend(ab, wlcMsg, wlcLen);
+
+    } else {
+      memBufAppend(ab, "~", 1);
+    }
+    
+    memBufAppend(ab, "\x1b[K", 3);
+    if (i < conf.dispRows - 1) 
+    {
+      memBufAppend(ab, "\r\n", 2);
+    }
+  }
 }
