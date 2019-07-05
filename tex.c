@@ -406,6 +406,18 @@ void texProcessKey(){
         case PAGE_UP:
         case PAGE_DOWN:
             {
+                if (c == PAGE_UP)
+                {
+                    conf.cur_y = conf.off_row;
+                }
+                else if (c == PAGE_DOWN) {
+                    conf.cur_y = conf.off_row + conf.dispRows - 1;
+                    if (conf.cur_y > conf.n_rows)
+                    {
+                        conf.cur_y = conf.n_rows;
+                    }
+                }
+
                 int times = conf.dispRows;
                 while (--times){
                     texNavCursor(c == PAGE_UP ? ARR_UP : ARR_DOWN);
