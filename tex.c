@@ -24,7 +24,7 @@
  * @brief Terminal Struct
  * @details Configuration Data
  */
-struct texConfig{
+struct texConfig {
     int dispRows;
     int dispCols;
     int cur_x;
@@ -32,9 +32,16 @@ struct texConfig{
     struct termios orig_termios;
 };
 struct texConfig conf; // Global scope
-struct memBuf{
+
+struct memBuf {
     char *b;
     int len;
+};
+enum navKey {
+    ARR_UP = 1020, // arbitrary, out of ASCII & CTRL range
+    ARR_DOWN, // incremental
+    ARR_LEFT,
+    ARR_RIGHT,
 };
 
 /**
@@ -43,7 +50,7 @@ struct memBuf{
 void enableRawMode();
 void disableRawMode();
 void terminate(const char *);
-char texReadKey();
+int texReadKey();
 void texProcessKey();
 void texDispRefresh();
 void texVimTildes();
@@ -52,7 +59,7 @@ void texDispSize();
 int getCursorPosition(int *, int *);
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
-void texNavCursor(char );
+void texNavCursor(int );
 
 /**
  * @brief main
@@ -147,7 +154,7 @@ void terminate(const char *s){
  * @details Read Input
  * @return Byte char
  */ 
-char texReadKey(){
+int texReadKey(){
     int nChar;
     char c;
     while(nChar = read(STDIN_FILENO, &c, 1) != 1 ){
@@ -156,7 +163,39 @@ char texReadKey(){
             terminate("read");
         }
     }
-    return c;
+
+    if (c == '\x1b')
+    {
+        char kNav[3];
+
+        if (read(STDIN_FILENO, &kNav[0], 1) != 1)
+        {
+            return '\x1b';
+        }
+        if (read(STDIN_FILENO, &kNav[1], 1) != 1)
+        {
+            return '\x1b';
+        }
+
+        if (kNav[0] == '[')
+        {
+            switch(kNav[1]){
+                case 'A':
+                    return ARR_UP;
+                case 'B':
+                    return ARR_DOWN;
+                case 'D':
+                    return ARR_LEFT;
+                case 'C':
+                    return ARR_RIGHT;
+            }
+        }
+
+        return '\x1b';
+    }
+    else {
+        return c;
+    }
 }
 
 /**
@@ -269,7 +308,7 @@ void memBufFree(struct memBuf *abuf){
  * @details Comprise keystrokes
  */
 void texProcessKey(){
-    char c = texReadKey();
+    int c = texReadKey();
 
     switch(c){
         case CTRL_KEY('q'):
@@ -279,10 +318,10 @@ void texProcessKey(){
             exit(0);
             break;
 
-        case 'w':
-        case 's':
-        case 'a':
-        case 'd':
+        case ARR_UP:
+        case ARR_DOWN:
+        case ARR_LEFT:
+        case ARR_RIGHT:
             texNavCursor(c);
             break;
 
@@ -292,18 +331,18 @@ void texProcessKey(){
     }
 }
 
-void texNavCursor(char key){
+void texNavCursor(int key){
     switch(key){
-        case 'w':
+        case ARR_UP:
             --conf.cur_y;
             break;
-        case 's':
+        case ARR_DOWN:
             ++conf.cur_y;
             break;
-        case 'a':
+        case ARR_LEFT:
             --conf.cur_x;
             break;
-        case 'd':
+        case ARR_RIGHT:
             ++conf.cur_x;
             break;
     }
