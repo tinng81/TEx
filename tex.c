@@ -448,7 +448,11 @@ void texNavCursor(int key){
             if (conf.cur_x != 0)
             {
                 --conf.cur_x;
-            }            
+            }         
+            else if (conf.cur_y > 0) {
+                --conf.cur_y;
+                conf.cur_x = conf.row[conf.cur_y].size;
+            }   
             break;
 
         case ARR_RIGHT:
