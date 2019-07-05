@@ -39,6 +39,7 @@ struct texConfig {
     int cur_x;
     int cur_y;
     int n_rows;
+    int off_rows;
     erow *row;
     struct termios orig_termios;
 };
@@ -112,6 +113,7 @@ void texDispInit(){
     conf.cur_y = 0;
     conf.n_rows = 0;
     conf.row = NULL;
+    conf.off_rows = 0;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
