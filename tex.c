@@ -13,6 +13,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include <stdarg.h>
+#include <fcntl.h>
 
 /**
  * @brief Define Keys
@@ -103,6 +104,7 @@ void setStatusMessage(const char *, ...);
 void texDrawStatusMsg(struct memBuf *);
 void utilCharInsert(erow *, int , int );
 void editorInputChar(int );
+char *utilRow2Str(int *);
 
 /**
  * @brief main
@@ -463,7 +465,7 @@ void texProcessKey(){
         case CTRL_KEY('l'):
         case '\x1b':
             break;
-            
+
         case '\r':
             // TODO: case Carriage Return
             break;
@@ -878,4 +880,33 @@ void utilCharInsert(erow *row, int at, int c) {
     editorUpdate(row);
 }
 
+/**
+ * @brief Utility for File I/O
+ * @details Convert before write to file
+ * 
+ * @param buf_len Row Buffer length
+ * @return Pointer to converted String
+ */
+char *utilRow2Str(int *buf_len) {
+    int tot_len = 0;
+    int i;
 
+    for (i = 0; i < conf.n_rows; ++i)
+    {
+        tot_len += conf.row[i].size + 1;
+    }
+
+    *buf_len = tot_len;
+
+    char *buffer = malloc(tot_len);
+    char *buf_ptr = buffer;
+
+    for (i = 0; i < conf.n_rows; ++i)
+    {
+        memcpy(buf_ptr, conf.row[i].chars, conf.row[i].size);
+        buf_ptr += conf.row[i].size;
+        *buf_ptr = '\n';
+        ++buf_ptr;
+    }
+    return buffer;
+}
