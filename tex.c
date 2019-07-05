@@ -334,17 +334,34 @@ void texProcessKey(){
 void texNavCursor(int key){
     switch(key){
         case ARR_UP:
-            --conf.cur_y;
+            if (conf.cur_y != 0)
+            {
+                --conf.cur_y;
+            }
             break;
+
         case ARR_DOWN:
-            ++conf.cur_y;
+            if (conf.cur_y != conf.dispRows - 1)
+            {
+                ++conf.cur_y;                
+            }
             break;
+
         case ARR_LEFT:
-            --conf.cur_x;
+            if (conf.cur_x != 0)
+            {
+                --conf.cur_x;
+            }            
             break;
+
         case ARR_RIGHT:
-            ++conf.cur_x;
+            if (conf.cur_x != conf.dispCols - 1)
+            {
+                ++conf.cur_x;
+            }
+            
             break;
+
     }
 }
 
