@@ -593,9 +593,12 @@ void texDrawLine(struct memBuf *ab){
 
 void texDrawStatusBar(struct memBuf *ab) {
     memBufAppend(ab, "\x1b[7m", 4);
-    char stt[80];
+    char stt[80], cur_stt[80];
     int len = snprintf(stt, sizeof(stt), "%.20s – %d lines", 
        conf.file_name ? conf.file_name : "[No Name]", conf.n_rows );
+
+    int cur_len = snprintf(cur_stt, sizeof(cur_stt), "%d/%d", 
+       conf.cur_y + 1, conf.n_rows );
 
     if (len > conf.dispCols)
     {
@@ -605,8 +608,15 @@ void texDrawStatusBar(struct memBuf *ab) {
     memBufAppend(ab, stt, len);
 
     while (len < conf.dispCols) {
-        memBufAppend(ab, " ", 1);
-        ++len;
+        if (conf.dispCols - len == cur_len)
+        {
+            memBufAppend(ab, cur_stt, cur_len);
+            break;
+        }
+        else {
+            memBufAppend(ab, " ", 1);
+            ++len;
+        }
     }
     memBufAppend(ab, "\x1b[m", 3);
 }
