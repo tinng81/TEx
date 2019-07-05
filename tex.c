@@ -63,6 +63,7 @@ struct memBuf {
     int len;
 };
 enum navKey {
+    BKSP_KEY = 127,
     ARR_UP = 1000, // arbitrary, out of ASCII & CTRL range
     ARR_DOWN, // incremental
     ARR_LEFT,
@@ -453,7 +454,19 @@ void texProcessKey(){
             }
             break;
 
-        // TODO: case DEL_KEY
+        case BKSP_KEY:
+        case CTRL_KEY('h'):
+        case DEL_KEY:
+            // TODO: case DEL_KEY
+            break;
+
+        case CTRL_KEY('l'):
+        case '\x1b':
+            break;
+            
+        case '\r':
+            // TODO: case Carriage Return
+            break;
 
         default:
             editorInputChar(c);
