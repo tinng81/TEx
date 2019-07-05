@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <sys/ioctl.h>
 #include <string.h>
+#include <sys/types.h>
 
 /**
  * @brief Define Keys
@@ -19,16 +20,26 @@
 #define BUF_INIT {NULL, 0}
 #define TEx_VERSION "0.0.1"
 #define TEx_VERSION_LAYOUT 3
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
 
 /**
  * @brief Terminal Struct
- * @details Configuration Data
+ * @details Config, Line Data
  */
+typedef struct erow {
+    int size;
+    char *chars;
+} erow;
+
 struct texConfig {
     int dispRows;
     int dispCols;
     int cur_x;
     int cur_y;
+    int n_rows;
+    erow row;
     struct termios orig_termios;
 };
 struct texConfig conf; // Global scope
@@ -49,6 +60,8 @@ enum navKey {
     DEL_KEY,
 };
 
+
+
 /**
  * @brief Function Prototypes
  */
@@ -58,13 +71,14 @@ void terminate(const char *);
 int texReadKey();
 void texProcessKey();
 void texDispRefresh();
-void texVimTildes();
+void texDrawLine();
 int getWindowSize(int *, int *);
 void texDispSize();
 int getCursorPosition(int *, int *);
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
 void texNavCursor(int );
+void editorOpen(char *);
 
 /**
  * @brief main
@@ -75,6 +89,10 @@ int main(int argc, char const *argv[])
 
     enableRawMode();
     texDispSize();
+    if (argc >= 2)
+    {
+        editorOpen(argv[1]);
+    }
 
     while(1){
         texDispRefresh();
@@ -91,6 +109,7 @@ int main(int argc, char const *argv[])
 void texDispSize(){
     conf.cur_x = 0;
     conf.cur_y = 0;
+    conf.n_rows = 0;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
@@ -447,7 +466,7 @@ void texDispRefresh(){
     memBufAppend(&ab,"\x1b[?25l",4);
     memBufAppend(&ab,"\x1b[1;1H",3);
 
-    texVimTildes(&ab);
+    texDrawLine(&ab);
 
     char cur_buf[64];
     snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", conf.cur_y + 1, conf.cur_x + 1);
@@ -464,40 +483,84 @@ void texDispRefresh(){
  * @details Vimify with tildes at each line
  * @args nRows: Arbitrary no. of tildes
  */
-void texVimTildes(struct memBuf *ab){
+void texDrawLine(struct memBuf *ab){
       int i;
   for (i = 0; i < conf.dispRows; ++i) {
-    if (i == conf.dispRows / TEx_VERSION_LAYOUT) {
-      char wlcMsg[80];
 
-      int wlcLen = snprintf(wlcMsg, sizeof(wlcMsg),
-        "TEx Editor –– Version %s", TEx_VERSION);
-
-    if (wlcLen > conf.dispCols) 
+    if (i >= conf.n_rows)
     {
-        wlcLen = conf.dispCols;
+        if (conf.n_rows == 0 && i == conf.dispRows / TEx_VERSION_LAYOUT) {
+          char wlcMsg[80];
+
+          int wlcLen = snprintf(wlcMsg, sizeof(wlcMsg),
+            "TEx Editor –– Version %s", TEx_VERSION);
+
+        if (wlcLen > conf.dispCols) 
+        {
+            wlcLen = conf.dispCols;
+        }
+
+        int padding = (conf.dispCols - wlcLen) / 2;
+        if (padding)
+        {
+            memBufAppend(ab, "~", 1);
+            --padding;
+        }
+        while(--padding) {
+            memBufAppend(ab, " ", 1);
+        }
+
+        memBufAppend(ab, wlcMsg, wlcLen);
+
+        } else {
+          memBufAppend(ab, "~", 1);
+        }
+    }
+    else {
+        int len = conf.row.size;
+        if (len > conf.dispCols)
+        {
+            len = conf.dispCols;
+        }
+        memBufAppend(ab, conf.row.chars, len);
     }
 
-    int padding = (conf.dispCols - wlcLen) / 2;
-    if (padding)
-    {
-        memBufAppend(ab, "~", 1);
-        --padding;
-    }
-    while(--padding) {
-        memBufAppend(ab, " ", 1);
-    }
-
-    memBufAppend(ab, wlcMsg, wlcLen);
-
-    } else {
-      memBufAppend(ab, "~", 1);
-    }
-    
     memBufAppend(ab, "\x1b[K", 3);
     if (i < conf.dispRows - 1) 
     {
       memBufAppend(ab, "\r\n", 2);
     }
   }
+}
+
+/**
+ * @brief High-level Editor handling
+ * @details Allocate memory, dynamic string for input
+ */
+void editorOpen(char *filename){
+    FILE *fp = fopen(filename, "r");
+    if (!fp)
+    {
+        terminate("fopen");
+    }
+
+    char *line = NULL;
+    size_t line_cap = 0;
+    ssize_t line_len;
+
+    line_len = getline(&line, &line_cap, fp);
+
+    if (line_len != -1)
+    {
+        while (line_len > 0 && ( line[line_len -1] == '\n' || line[line_len - 1] == '\r') ) {
+            --line_len;
+        }
+        conf.row.size = line_len;
+        conf.row.chars = malloc (line_len + 1);
+        memcpy(conf.row.chars, line, line_len);
+        conf.row.chars[line_len] = '\0';
+        conf.n_rows = 1;
+    }
+    free(line);
+    fclose(fp);
 }
