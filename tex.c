@@ -361,6 +361,12 @@ void texProcessKey(){
     }
 }
 
+/**
+ * @brief Input Handling
+ * @details Navigate Cursor position
+ * 
+ * @param key Input keystroke (arrow)
+ */
 void texNavCursor(int key){
     switch(key){
         case ARR_UP:
