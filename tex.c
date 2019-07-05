@@ -38,12 +38,14 @@ struct memBuf {
     int len;
 };
 enum navKey {
-    ARR_UP = 1020, // arbitrary, out of ASCII & CTRL range
+    ARR_UP = 1000, // arbitrary, out of ASCII & CTRL range
     ARR_DOWN, // incremental
     ARR_LEFT,
     ARR_RIGHT,
     PAGE_UP,
     PAGE_DOWN,
+    HOME_KEY,
+    END_KEY,
 };
 
 /**
@@ -192,8 +194,16 @@ int texReadKey(){
                 if (kNav[2] == '~')
                 {
                     switch(kNav[1]){
+                        case '1': return HOME_KEY;
+                        case '4': return END_KEY;
                         case '5': return PAGE_UP;
                         case '6': return PAGE_DOWN;
+
+                        /* 
+                            NOTE: OSes, Terminal emulators compatibility
+                        */
+                        case '7': return HOME_KEY;
+                        case '8': return END_KEY;
                     }
                 }
             }
@@ -207,7 +217,17 @@ int texReadKey(){
                         return ARR_LEFT;
                     case 'C':
                         return ARR_RIGHT;
+                    case 'H':
+                        return HOME_KEY;
+                    case 'F':
+                        return END_KEY;
                 }
+            }
+        }
+        else if (kNav[0] == '0') {
+            switch (kNav[1]){
+                case 'H': return HOME_KEY;
+                case 'F': return END_KEY;
             }
         }
 
@@ -338,6 +358,13 @@ void texProcessKey(){
             exit(0);
             break;
 
+        case ARR_UP:
+        case ARR_DOWN:
+        case ARR_LEFT:
+        case ARR_RIGHT:
+            texNavCursor(c);
+            break;
+
         case PAGE_UP:
         case PAGE_DOWN:
             {
@@ -348,13 +375,15 @@ void texProcessKey(){
             }
             break;
 
-        case ARR_UP:
-        case ARR_DOWN:
-        case ARR_LEFT:
-        case ARR_RIGHT:
-            texNavCursor(c);
+        case HOME_KEY:
+            conf.cur_x = 0;
             break;
 
+        case END_KEY:
+            conf.cur_x = conf.dispCols - 1;
+            break;
+
+        // TODO: Remove later in production
         default:
             printf("%d [%c]\r\n", c, c);
             break;
