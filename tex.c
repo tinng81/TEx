@@ -11,6 +11,8 @@
 #include <sys/ioctl.h>
 #include <string.h>
 #include <sys/types.h>
+#include <time.h>
+#include <stdarg.h>
 
 /**
  * @brief Define Keys
@@ -49,6 +51,8 @@ struct texConfig {
     int off_row;
     int off_col;
     char *file_name;
+    char *stt_msg[80];
+    time_t *msg_time;
     erow *row;
     struct termios orig_termios;
 };
@@ -94,6 +98,7 @@ void editorScroll();
 void editorUpdate(erow *);
 int utilCur2Ren(erow *, int );
 void texDrawStatusBar(struct memBuf *);
+void setStatusMessage(const char *, ...);
 
 /**
  * @brief main
@@ -108,6 +113,8 @@ int main(int argc, char const *argv[])
     {
         editorOpen( (char *) argv[1]);
     }
+
+    setStatusMessage("HELP: Ctrl-Q to quit");
 
     while(1){
         texDispRefresh();
@@ -130,13 +137,15 @@ void texDispInit(){
     conf.file_name = NULL;
     conf.off_row = 0;
     conf.off_col = 0;
+    conf.stt_msg[0] = '\0';
+    conf.msg_time = 0;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
         terminate("getWindowSize");
     }
 
-    conf.dispRows -= 1;
+    conf.dispRows -= 2;
 }
 
 /**
@@ -591,6 +600,12 @@ void texDrawLine(struct memBuf *ab){
   }
 }
 
+/**
+ * @brief Draw Status Bar
+ * @details STT at end of window
+ * 
+ * @param memBuf memory buffer for Status Bar
+ */
 void texDrawStatusBar(struct memBuf *ab) {
     memBufAppend(ab, "\x1b[7m", 4);
     char stt[80], cur_stt[80];
@@ -619,6 +634,21 @@ void texDrawStatusBar(struct memBuf *ab) {
         }
     }
     memBufAppend(ab, "\x1b[m", 3);
+    memBufAppend(ab, "\r\n", 2);
+}
+
+/**
+ * @brief Set Status Message
+ * @details stt_msg below Status Bar
+ * 
+ * @param fmt variadic func
+ */
+void setStatusMessage(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(conf.stt_msg, sizeof(conf.stt_msg), fmt, ap);
+    va_end(ap);
+    conf.msg_time = time(NULL);
 }
 
 /**
