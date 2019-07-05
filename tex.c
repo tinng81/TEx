@@ -412,11 +412,7 @@ void texProcessKey(){
             break;
 
         // TODO: case DEL_KEY
-
-        // TODO: Remove later in production
-        default:
-            printf("%d [%c]\r\n", c, c);
-            break;
+            
     }
 }
 
