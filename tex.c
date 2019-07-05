@@ -51,6 +51,7 @@ struct texConfig {
     int n_rows;
     int off_row;
     int off_col;
+    int mod;
     char *file_name;
     char *stt_msg[80];
     time_t msg_time;
@@ -146,6 +147,7 @@ void texDispInit(){
     conf.off_col = 0;
     conf.stt_msg[0] = '\0';
     conf.msg_time = 0;
+    conf.mod = 0;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
@@ -636,8 +638,10 @@ void texDrawLine(struct memBuf *ab){
 void texDrawStatusBar(struct memBuf *ab) {
     memBufAppend(ab, "\x1b[7m", 4);
     char stt[80], cur_stt[80];
-    int len = snprintf(stt, sizeof(stt), "%.20s – %d lines", 
-       conf.file_name ? conf.file_name : "[No Name]", conf.n_rows );
+
+    int len = snprintf(stt, sizeof(stt), "%.20s - %d lines %s",
+    conf.file_name ? conf.file_name : "[No Name]", conf.n_rows,
+    conf.mod ? "(modified)" : "");
 
     int cur_len = snprintf(cur_stt, sizeof(cur_stt), "%d/%d", 
        conf.cur_y + 1, conf.n_rows );
@@ -727,6 +731,7 @@ void editorOpen(char *file_name){
 
     free(line);
     fclose(fp);
+    conf.mod = 0;
 }
 
 /**
@@ -752,6 +757,7 @@ void editorSave() {
             {
                 close(fp);
                 free(buffer);
+                conf.mod = 0;
                 setStatusMessage("%d bytes written to file", len);
                 return;
             }
@@ -783,6 +789,7 @@ void editorAppend(char *s, size_t len){
     editorUpdate(&conf.row[at]);
 
     conf.n_rows++;
+    conf.mod++;
 }
 
 /**
@@ -916,6 +923,7 @@ void utilCharInsert(erow *row, int at, int c) {
     ++row->size;
     row->chars[at] = c;
     editorUpdate(row);
+    conf.mod++;
 }
 
 /**
