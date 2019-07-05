@@ -97,6 +97,9 @@ void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
 void texNavCursor(int );
 void editorOpen(char *);
+void editorSave();
+void editorInputChar(int );
+void editorRemoveChar();
 void editorAppend(char *, size_t );
 void editorScroll();
 void editorUpdate(erow *);
@@ -105,9 +108,9 @@ void texDrawStatusBar(struct memBuf *);
 void setStatusMessage(const char *, ...);
 void texDrawStatusMsg(struct memBuf *);
 void utilCharInsert(erow *, int , int );
-void editorInputChar(int );
+void utilCharDel(erow *, int );
 char *utilRow2Str(int *);
-void editorSave();
+
 
 /**
  * @brief main
@@ -475,7 +478,11 @@ void texProcessKey(){
         case BKSP_KEY:
         case CTRL_KEY('h'):
         case DEL_KEY:
-            // TODO: case DEL_KEY
+            if (c == DEL_KEY)
+            {
+                texNavCursor(ARR_RIGHT);
+            }
+            editorRemoveChar();
             break;
 
         case CTRL_KEY('l'):
@@ -892,6 +899,26 @@ void editorInputChar(int c) {
 }
 
 /**
+ * @brief User Input Handling
+ * @details Invoke util to delete Char from row
+ */
+void editorRemoveChar() {
+    if (conf.cur_y == conf.n_rows)
+    {
+        return;
+    }
+
+    erow *row = &conf.row[conf.cur_y];
+
+    if (conf.cur_x > 0)
+    {
+        utilCharDel(row, conf.cur_x - 1);
+        --conf.cur_x;
+    }
+
+}
+
+/**
  * @brief Utility for Screen Rending
  * @details Cursor to Render char count
  * 
@@ -932,6 +959,25 @@ void utilCharInsert(erow *row, int at, int c) {
     memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
     ++row->size;
     row->chars[at] = c;
+    editorUpdate(row);
+    conf.mod++;
+}
+
+/**
+ * @brief Utility for Row Rending
+ * @details Remove char at buffer
+ * 
+ * @param row Current Row
+ * @param at Cursor Position
+ */
+void utilCharDel(erow *row, int at) {
+    if (at < 0 || at > row->size)
+    {
+        return;
+    }
+
+    memmove(&row->chars[at], &row->chars[at + 1], row->size -at);
+    row->size--;
     editorUpdate(row);
     conf.mod++;
 }
