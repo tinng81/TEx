@@ -95,7 +95,7 @@ int main(int argc, char const *argv[])
     texDispInit();
     if (argc >= 2)
     {
-        editorOpen(argv[1]);
+        editorOpen( (char *) argv[1]);
     }
 
     while(1){
@@ -188,9 +188,9 @@ void terminate(const char *s){
 int texReadKey(){
     int nChar;
     char c;
-    while(nChar = read(STDIN_FILENO, &c, 1) != 1 ){
+    while( (nChar = read(STDIN_FILENO, &c, 1) ) != 1 ){
         if (nChar == -1 && errno != EAGAIN) // Again, Cygwin compatibility
-        {
+        {//
             terminate("read");
         }
     }
