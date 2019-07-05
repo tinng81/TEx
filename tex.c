@@ -42,6 +42,8 @@ enum navKey {
     ARR_DOWN, // incremental
     ARR_LEFT,
     ARR_RIGHT,
+    PAGE_UP,
+    PAGE_DOWN,
 };
 
 /**
@@ -179,15 +181,33 @@ int texReadKey(){
 
         if (kNav[0] == '[')
         {
-            switch(kNav[1]){
-                case 'A':
-                    return ARR_UP;
-                case 'B':
-                    return ARR_DOWN;
-                case 'D':
-                    return ARR_LEFT;
-                case 'C':
-                    return ARR_RIGHT;
+
+            if (kNav[1] >= '0' && kNav[1] <= '9')
+            {
+                if (read(STDIN_FILENO, &kNav[2], 1) != 1)
+                {
+                    return '\x1b';
+                }
+
+                if (kNav[2] == '~')
+                {
+                    switch(kNav[1]){
+                        case '5': return PAGE_UP;
+                        case '6': return PAGE_DOWN;
+                    }
+                }
+            }
+            else {
+                switch(kNav[1]){
+                    case 'A':
+                        return ARR_UP;
+                    case 'B':
+                        return ARR_DOWN;
+                    case 'D':
+                        return ARR_LEFT;
+                    case 'C':
+                        return ARR_RIGHT;
+                }
             }
         }
 
@@ -316,6 +336,16 @@ void texProcessKey(){
             write(STDIN_FILENO,"\x1b[1;1H",3);
 
             exit(0);
+            break;
+
+        case PAGE_UP:
+        case PAGE_DOWN:
+            {
+                int times = conf.dispRows;
+                while (--times){
+                    texNavCursor(c == PAGE_UP ? ARR_UP : ARR_DOWN);
+                }
+            }
             break;
 
         case ARR_UP:
