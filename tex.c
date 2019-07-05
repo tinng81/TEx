@@ -18,8 +18,11 @@
 */
 #define CTRL_KEY(k) ( k & 0x1f )
 #define BUF_INIT {NULL, 0}
+
 #define TEx_VERSION "0.0.1"
 #define TEx_VERSION_LAYOUT 3
+#define TABS_TO_SPACES 8
+
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 #define _GNU_SOURCE
@@ -30,7 +33,10 @@
  */
 typedef struct erow {
     int size;
+    int ren_sz;
     char *chars;
+    char *render;
+
 } erow;
 
 struct texConfig {
@@ -83,6 +89,7 @@ void texNavCursor(int );
 void editorOpen(char *);
 void editorAppend(char *, size_t );
 void editorScroll();
+void editorUpdate(erow *);
 
 /**
  * @brief main
@@ -412,7 +419,7 @@ void texProcessKey(){
             break;
 
         // TODO: case DEL_KEY
-            
+
     }
 }
 
@@ -541,7 +548,7 @@ void texDrawLine(struct memBuf *ab){
         }
     }
     else {
-        int len = conf.row[fp_row].size - conf.off_col;
+        int len = conf.row[fp_row].ren_sz - conf.off_col;
 
         if (len < 0)
         {
@@ -552,7 +559,7 @@ void texDrawLine(struct memBuf *ab){
         {
             len = conf.dispCols;
         }
-        memBufAppend(ab, &conf.row[fp_row].chars[conf.off_col], len);
+        memBufAppend(ab, &conf.row[fp_row].render[conf.off_col], len);
     }
 
     memBufAppend(ab, "\x1b[K", 3);
@@ -604,7 +611,12 @@ void editorAppend(char *s, size_t len){
     conf.row[at].chars = malloc (len + 1);
     memcpy(conf.row[at].chars, s, len);
     conf.row[at].chars[len] = '\0';
-    ++conf.n_rows;
+    
+    conf.row[at].ren_sz = 0;
+    conf.row[at].render = NULL;
+    editorUpdate(&conf.row[at]);
+
+    conf.n_rows++;
 }
 
 /**
@@ -631,4 +643,38 @@ void editorScroll(){
     {
         conf.off_col = conf.cur_x - conf.dispCols + 1;
     }
+}
+
+void editorUpdate(erow *row) {
+    int tabs = 0;
+    int i;
+
+    for (i = 0; i < row->size; ++i)
+    {
+        if (row->chars[i] == '\t')
+        {
+            ++tabs;
+        }
+    }
+
+    free(row ->render);
+    row->render = malloc(row->size + tabs * (TABS_TO_SPACES - 1) + 1);
+
+    int idx = 0;
+    for (i = 0; i < row->size; ++i)
+    {
+
+        if (row->chars[i] == '\t')
+        {
+            row->render[idx++] = ' ';
+            while (idx % TABS_TO_SPACES != 0) {
+                row->render[idx++] = ' ';
+            }
+        }
+        else {
+            row->render[idx++] = row->chars[i];
+        }
+    }
+    row->render[idx] = '\0';
+    row->ren_sz = idx;
 }
