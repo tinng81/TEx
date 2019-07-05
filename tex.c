@@ -121,7 +121,7 @@ int main(int argc, char const *argv[])
         editorOpen( (char *) argv[1]);
     }
 
-    setStatusMessage("HELP: Ctrl-Q to quit");
+    setStatusMessage("HELP: Ctrl-S to save | Ctrl-Q to quit");
 
     while(1){
         texDispRefresh();
@@ -752,12 +752,14 @@ void editorSave() {
             {
                 close(fp);
                 free(buffer);
+                setStatusMessage("%d bytes written to file", len);
                 return;
             }
         }
         close(fp);
     }
     free(buffer);
+    setStatusMessage("Cannot save ! I/O Error: %s", strerror(errno));
 }
 
 /**
