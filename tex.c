@@ -385,6 +385,8 @@ void texProcessKey(){
             conf.cur_x = conf.dispCols - 1;
             break;
 
+        // TODO: case DEL_KEY
+
         // TODO: Remove later in production
         default:
             printf("%d [%c]\r\n", c, c);
