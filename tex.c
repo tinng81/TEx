@@ -25,6 +25,7 @@
 #define TEx_VERSION "0.0.1"
 #define TEx_VERSION_LAYOUT 3
 #define TABS_TO_SPACES 8
+#define FORCE_QUIT 2
 
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
@@ -409,10 +410,18 @@ void memBufFree(struct memBuf *abuf){
  * @details Comprise keystrokes
  */
 void texProcessKey(){
+    static int confirm_exit = FORCE_QUIT;
     int c = texReadKey();
 
     switch(c){
         case CTRL_KEY('q'):
+            if (conf.mod && confirm_exit > 0)
+            {
+                setStatusMessage("WARNING ! File has unsaved changes. Press Ctrl-Q again (%d) to confirm quit", confirm_exit);
+                --confirm_exit;
+                return;
+            }
+
             write(STDIN_FILENO,"\x1b[2J",4);
             write(STDIN_FILENO,"\x1b[1;1H",3);
 
@@ -481,6 +490,7 @@ void texProcessKey(){
             editorInputChar(c);
             break;
     }
+    confirm_exit = FORCE_QUIT; // re-initialize
 }
 
 /**
