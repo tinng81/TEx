@@ -52,7 +52,7 @@ struct texConfig {
     int off_col;
     char *file_name;
     char *stt_msg[80];
-    time_t *msg_time;
+    time_t msg_time;
     erow *row;
     struct termios orig_termios;
 };
@@ -99,6 +99,7 @@ void editorUpdate(erow *);
 int utilCur2Ren(erow *, int );
 void texDrawStatusBar(struct memBuf *);
 void setStatusMessage(const char *, ...);
+void texDrawStatusMsg(struct memBuf *);
 
 /**
  * @brief main
@@ -529,6 +530,7 @@ void texDispRefresh(){
 
     texDrawLine(&ab);
     texDrawStatusBar(&ab);
+    texDrawStatusMsg(&ab);
 
     char cur_buf[64];
     snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", (conf.cur_y - conf.off_row) + 1,
@@ -635,6 +637,28 @@ void texDrawStatusBar(struct memBuf *ab) {
     }
     memBufAppend(ab, "\x1b[m", 3);
     memBufAppend(ab, "\r\n", 2);
+}
+
+/**
+ * @brief Draw Message Bar
+ * @details STT msg below STT bar
+ * 
+ * @param memBuf memory buffer for Status Message
+ */
+void texDrawStatusMsg(struct memBuf *ab) {
+    memBufAppend(ab, "\x1b[K", 3);
+    int msg_len = strlen(conf.stt_msg);
+
+    if (msg_len > conf.dispCols)
+    {
+        msg_len = conf.dispCols;
+    }
+
+    if (msg_len && (time(NULL) - conf.msg_time) < 5)
+    {
+        memBufAppend(ab, conf.stt_msg, msg_len);
+    }
+
 }
 
 /**
