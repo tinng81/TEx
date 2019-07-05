@@ -18,6 +18,8 @@
 #define CTRL_KEY(k) ( k & 0x1f )
 #define BUF_INIT {NULL, 0}
 #define TEx_VERSION "0.0.1"
+#define TEx_VERSION_LAYOUT 3
+
 /**
  * @brief Terminal Struct
  * @details Configuration Data
@@ -25,6 +27,8 @@
 struct texConfig{
     int dispRows;
     int dispCols;
+    int cur_x;
+    int cur_y;
     struct termios orig_termios;
 };
 struct texConfig conf; // Global scope
@@ -48,6 +52,7 @@ void texDispSize();
 int getCursorPosition(int *, int *);
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
+void texNavCursor(char );
 
 /**
  * @brief main
@@ -72,6 +77,9 @@ int main(int argc, char const *argv[])
  * @details Invoke size info and adjust display
  */
 void texDispSize(){
+    conf.cur_x = 0;
+    conf.cur_y = 0;
+
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
         terminate("getWindowSize");
@@ -270,8 +278,33 @@ void texProcessKey(){
 
             exit(0);
             break;
+
+        case 'w':
+        case 's':
+        case 'a':
+        case 'd':
+            texNavCursor(c);
+            break;
+
         default:
             printf("%d [%c]\r\n", c, c);
+            break;
+    }
+}
+
+void texNavCursor(char key){
+    switch(key){
+        case 'w':
+            --conf.cur_y;
+            break;
+        case 's':
+            ++conf.cur_y;
+            break;
+        case 'a':
+            --conf.cur_x;
+            break;
+        case 'd':
+            ++conf.cur_x;
             break;
     }
 }
@@ -291,8 +324,11 @@ void texDispRefresh(){
 
     texVimTildes(&ab);
 
-    memBufAppend(&ab,"\x1b[1;1H",3);
-    memBufAppend(&ab,"\x1b[?25l",4);
+    char cur_buf[64];
+    snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", conf.cur_y + 1, conf.cur_x + 1);
+    memBufAppend(&ab, cur_buf, strlen(cur_buf));
+
+    memBufAppend(&ab,"\x1b[?25h",6);
 
     write(STDIN_FILENO, ab.b, ab.len);
     memBufFree(&ab);
@@ -306,7 +342,7 @@ void texDispRefresh(){
 void texVimTildes(struct memBuf *ab){
       int i;
   for (i = 0; i < conf.dispRows; ++i) {
-    if (i == conf.dispRows / 3) {
+    if (i == conf.dispRows / TEx_VERSION_LAYOUT) {
       char wlcMsg[80];
 
       int wlcLen = snprintf(wlcMsg, sizeof(wlcMsg),
