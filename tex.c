@@ -100,6 +100,8 @@ int utilCur2Ren(erow *, int );
 void texDrawStatusBar(struct memBuf *);
 void setStatusMessage(const char *, ...);
 void texDrawStatusMsg(struct memBuf *);
+void utilCharInsert(erow *, int , int );
+void editorInputChar(int );
 
 /**
  * @brief main
@@ -453,6 +455,9 @@ void texProcessKey(){
 
         // TODO: case DEL_KEY
 
+        default:
+            editorInputChar(c);
+            break;
     }
 }
 
@@ -802,6 +807,21 @@ void editorUpdate(erow *row) {
 }
 
 /**
+ * @brief User Input Handling
+ * @details Invoke util to insert Char to row
+ * 
+ * @param c Input Character
+ */
+void editorInputChar(int c) {
+    if (conf.cur_y == conf.n_rows)
+    {
+        editorAppend("", 0);
+    }
+    utilCharInsert(&conf.row[conf.cur_y], conf.cur_x, c);
+    ++conf.cur_x;
+}
+
+/**
  * @brief Utility for Screen Rending
  * @details Cursor to Render char count
  * 
@@ -823,3 +843,26 @@ int utilCur2Ren(erow *row, int cur_x) {
     }
     return ren_x;
 }
+
+/**
+ * @brief Utility for Row Rending
+ * @details Insert input char
+ * 
+ * @param row Current Row
+ * @param at Cursor Position
+ * @param c ASCII coded char
+ */ 
+void utilCharInsert(erow *row, int at, int c) {
+    if (at < 0 || at > row->size)
+    {
+        at = row->size;
+    }
+    
+    row->chars = realloc(row->chars, row->size + 2);
+    memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
+    ++row->size;
+    row->chars[at] = c;
+    editorUpdate(row);
+}
+
+
