@@ -39,7 +39,7 @@ struct texConfig {
     int cur_x;
     int cur_y;
     int n_rows;
-    int off_rows;
+    int off_row;
     erow *row;
     struct termios orig_termios;
 };
@@ -81,6 +81,7 @@ void memBufFree(struct memBuf *);
 void texNavCursor(int );
 void editorOpen(char *);
 void editorAppend(char *, size_t );
+void editorScroll();
 
 /**
  * @brief main
@@ -113,7 +114,7 @@ void texDispInit(){
     conf.cur_y = 0;
     conf.n_rows = 0;
     conf.row = NULL;
-    conf.off_rows = 0;
+    conf.off_row = 0;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
@@ -433,7 +434,7 @@ void texNavCursor(int key){
             break;
 
         case ARR_DOWN:
-            if (conf.cur_y != conf.dispRows - 1)
+            if (conf.cur_y < conf.n_rows)
             {
                 ++conf.cur_y;                
             }
@@ -465,6 +466,8 @@ void texNavCursor(int key){
  * @args Cursor Position <1;1H>: Row 1 ; Col 1
  */
 void texDispRefresh(){
+    editorScroll();
+
     struct memBuf ab = BUF_INIT;
 
     memBufAppend(&ab,"\x1b[?25l",4);
@@ -473,7 +476,7 @@ void texDispRefresh(){
     texDrawLine(&ab);
 
     char cur_buf[64];
-    snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", conf.cur_y + 1, conf.cur_x + 1);
+    snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", (conf.cur_y - conf.off_row) + 1, conf.cur_x + 1);
     memBufAppend(&ab, cur_buf, strlen(cur_buf));
 
     memBufAppend(&ab,"\x1b[?25h",6);
@@ -490,8 +493,9 @@ void texDispRefresh(){
 void texDrawLine(struct memBuf *ab){
   int i;
   for (i = 0; i < conf.dispRows; ++i) {
+    int fp_row = i + conf.off_row;
 
-    if (i >= conf.n_rows)
+    if (fp_row >= conf.n_rows)
     {
         if (conf.n_rows == 0 && i == conf.dispRows / TEx_VERSION_LAYOUT) {
           char wlcMsg[80];
@@ -521,12 +525,12 @@ void texDrawLine(struct memBuf *ab){
         }
     }
     else {
-        int len = conf.row[i].size;
+        int len = conf.row[fp_row].size;
         if (len > conf.dispCols)
         {
             len = conf.dispCols;
         }
-        memBufAppend(ab, conf.row[i].chars, len);
+        memBufAppend(ab, conf.row[fp_row].chars, len);
     }
 
     memBufAppend(ab, "\x1b[K", 3);
@@ -563,6 +567,13 @@ void editorOpen(char *filename){
     fclose(fp);
 }
 
+/**
+ * @brief High-level Editor handling
+ * @details Read each line from file input
+ * 
+ * @param s Line from file
+ * @param len Line Length
+ */
 void editorAppend(char *s, size_t len){
     conf.row = realloc(conf.row, sizeof(erow) * (conf.n_rows + 1) );
 
@@ -572,4 +583,20 @@ void editorAppend(char *s, size_t len){
     memcpy(conf.row[at].chars, s, len);
     conf.row[at].chars[len] = '\0';
     ++conf.n_rows;
+}
+
+/**
+ * @brief High-level Editor handling
+ * @details Scrolling feature
+ */
+void editorScroll(){
+    if (conf.cur_y < conf.off_row)
+    {
+        conf.off_row = conf.cur_y;
+    }
+
+    if (conf.cur_y >= conf.off_row + conf.dispRows)
+    {
+        conf.off_row = conf.cur_y - conf.dispRows + 1;
+    }
 }
