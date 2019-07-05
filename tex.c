@@ -39,7 +39,7 @@ struct texConfig {
     int cur_x;
     int cur_y;
     int n_rows;
-    erow row;
+    erow *row;
     struct termios orig_termios;
 };
 struct texConfig conf; // Global scope
@@ -73,12 +73,13 @@ void texProcessKey();
 void texDispRefresh();
 void texDrawLine();
 int getWindowSize(int *, int *);
-void texDispSize();
+void texDispInit();
 int getCursorPosition(int *, int *);
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
 void texNavCursor(int );
 void editorOpen(char *);
+void editorAppend(char *, size_t );
 
 /**
  * @brief main
@@ -88,7 +89,7 @@ int main(int argc, char const *argv[])
 {
 
     enableRawMode();
-    texDispSize();
+    texDispInit();
     if (argc >= 2)
     {
         editorOpen(argv[1]);
@@ -106,10 +107,11 @@ int main(int argc, char const *argv[])
  * @brief Initialize
  * @details Invoke size info and adjust display
  */
-void texDispSize(){
+void texDispInit(){
     conf.cur_x = 0;
     conf.cur_y = 0;
     conf.n_rows = 0;
+    conf.row = NULL;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
@@ -484,7 +486,7 @@ void texDispRefresh(){
  * @args nRows: Arbitrary no. of tildes
  */
 void texDrawLine(struct memBuf *ab){
-      int i;
+  int i;
   for (i = 0; i < conf.dispRows; ++i) {
 
     if (i >= conf.n_rows)
@@ -517,12 +519,12 @@ void texDrawLine(struct memBuf *ab){
         }
     }
     else {
-        int len = conf.row.size;
+        int len = conf.row[i].size;
         if (len > conf.dispCols)
         {
             len = conf.dispCols;
         }
-        memBufAppend(ab, conf.row.chars, len);
+        memBufAppend(ab, conf.row[i].chars, len);
     }
 
     memBufAppend(ab, "\x1b[K", 3);
@@ -555,12 +557,19 @@ void editorOpen(char *filename){
         while (line_len > 0 && ( line[line_len -1] == '\n' || line[line_len - 1] == '\r') ) {
             --line_len;
         }
-        conf.row.size = line_len;
-        conf.row.chars = malloc (line_len + 1);
-        memcpy(conf.row.chars, line, line_len);
-        conf.row.chars[line_len] = '\0';
-        conf.n_rows = 1;
+        editorAppend(line, line_len);
     }
     free(line);
     fclose(fp);
+}
+
+void editorAppend(char *s, size_t len){
+    conf.row = realloc(conf.row, sizeof(erow) * (conf.n_rows + 1) )
+
+    int at = conf.n_rows;
+    conf.row[at].size = len;
+    conf.row[at].chars = malloc (len + 1);
+    memcpy(conf.row[at].chars, s, len);
+    conf.row[at].chars[len] = '\0';
+    ++conf.n_rows;
 }
