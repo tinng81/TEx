@@ -105,6 +105,7 @@ void texDrawStatusMsg(struct memBuf *);
 void utilCharInsert(erow *, int , int );
 void editorInputChar(int );
 char *utilRow2Str(int *);
+void editorSave();
 
 /**
  * @brief main
@@ -722,6 +723,26 @@ void editorOpen(char *file_name){
 
     free(line);
     fclose(fp);
+}
+
+/**
+ * @brief File I/O Handling
+ * @details Save any changes
+ */
+void editorSave() {
+    if (conf.file_name == NULL)
+    {
+        return;
+    }
+
+    int len;
+    char *buffer = utilRow2Str(&len);
+
+    int fp = open(conf.file_name, O_RDWR | O_CREAT, 0644);
+    ftruncate(fp, len);
+    write(fd, buffer, len);
+    close(fp);
+    free(buffer);
 }
 
 /**
