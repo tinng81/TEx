@@ -48,6 +48,7 @@ struct texConfig {
     int n_rows;
     int off_row;
     int off_col;
+    char *file_name;
     erow *row;
     struct termios orig_termios;
 };
@@ -92,6 +93,7 @@ void editorAppend(char *, size_t );
 void editorScroll();
 void editorUpdate(erow *);
 int utilCur2Ren(erow *, int );
+void texDrawStatusBar(struct memBuf *);
 
 /**
  * @brief main
@@ -125,6 +127,7 @@ void texDispInit(){
     conf.ren_x = 0;
     conf.n_rows = 0;
     conf.row = NULL;
+    conf.file_name = NULL;
     conf.off_row = 0;
     conf.off_col = 0;
 
@@ -132,6 +135,8 @@ void texDispInit(){
     {
         terminate("getWindowSize");
     }
+
+    conf.dispRows -= 1;
 }
 
 /**
@@ -514,6 +519,7 @@ void texDispRefresh(){
     memBufAppend(&ab,"\x1b[1;1H",3);
 
     texDrawLine(&ab);
+    texDrawStatusBar(&ab);
 
     char cur_buf[64];
     snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", (conf.cur_y - conf.off_row) + 1,
@@ -581,19 +587,29 @@ void texDrawLine(struct memBuf *ab){
     }
 
     memBufAppend(ab, "\x1b[K", 3);
-    if (i < conf.dispRows - 1) 
-    {
-      memBufAppend(ab, "\r\n", 2);
-    }
+    memBufAppend(ab, "\r\n", 2);
   }
+}
+
+void texDrawStatusBar(struct memBuf *ab) {
+    memBufAppend(ab, "\x1b[7m", 4);
+    int len = 0;
+    while (len < conf.dispCols) {
+        memBufAppend(ab, " ", 1);
+        ++len;
+    }
+    memBufAppend(ab, "\x1b[m", 3);
 }
 
 /**
  * @brief High-level Editor handling
  * @details Allocate memory, dynamic string for input
  */
-void editorOpen(char *filename){
-    FILE *fp = fopen(filename, "r");
+void editorOpen(char *file_name){
+    free(conf.file_name);
+    conf.file_name = strdup(file_name);
+
+    FILE *fp = fopen(file_name, "r");
     if (!fp)
     {
         terminate("fopen");
@@ -711,6 +727,15 @@ void editorUpdate(erow *row) {
     row->ren_sz = idx;
 }
 
+/**
+ * @brief Utility for Screen Rending
+ * @details Cursor to Render char count
+ * 
+ * @param row Input Row
+ * @param cur_x Cursor Column
+ * 
+ * @return Render equivalent Column
+ */
 int utilCur2Ren(erow *row, int cur_x) {
     int ren_x = 0;
     int i;
