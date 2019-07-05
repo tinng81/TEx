@@ -95,11 +95,13 @@ void texDispInit();
 int getCursorPosition(int *, int *);
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
+void memFreeRow(erow *);
 void texNavCursor(int );
 void editorOpen(char *);
 void editorSave();
 void editorInputChar(int );
 void editorRemoveChar();
+void editorRemoveRow(int );
 void editorAppend(char *, size_t );
 void editorScroll();
 void editorUpdate(erow *);
@@ -407,6 +409,16 @@ void memBufFree(struct memBuf *abuf){
     free(abuf->b);
 }
 
+/**
+ * @brief Row control
+ * @details Free Memory at Delete
+ * 
+ * @param row Current Row
+ */
+void memFreeRow(erow *row) {
+    free(row->render);
+    free(row->chars);
+}
 
 /**
  * @brief Input Handling
@@ -915,7 +927,24 @@ void editorRemoveChar() {
         utilCharDel(row, conf.cur_x - 1);
         --conf.cur_x;
     }
+}
 
+/**
+ * @brief User Input Handling
+ * @details Invoke util to delete entire Row
+ * 
+ * @param at Current Row
+ */
+void editorRemoveRow(int at) {
+    if (at < 0 || at >= conf.n_rows)
+    {
+        return;
+    }
+
+    memFreeRow(&conf.row[at]);
+    memmove(&conf.row[at], &conf.row[at + 1], sizeof(erow) * (conf.n_rows - at - 1) );
+    --conf.n_rows;
+    conf.mod++;
 }
 
 /**
