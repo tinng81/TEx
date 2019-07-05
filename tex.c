@@ -417,6 +417,10 @@ void texProcessKey(){
             exit(0);
             break;
 
+        case CTRL_KEY('s'):
+            editorSave();
+            break;
+
         case ARR_UP:
         case ARR_DOWN:
         case ARR_LEFT:
@@ -740,7 +744,7 @@ void editorSave() {
 
     int fp = open(conf.file_name, O_RDWR | O_CREAT, 0644);
     ftruncate(fp, len);
-    write(fd, buffer, len);
+    write(fp, buffer, len);
     close(fp);
     free(buffer);
 }
