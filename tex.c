@@ -40,6 +40,7 @@ struct texConfig {
     int cur_y;
     int n_rows;
     int off_row;
+    int off_col;
     erow *row;
     struct termios orig_termios;
 };
@@ -115,6 +116,7 @@ void texDispInit(){
     conf.n_rows = 0;
     conf.row = NULL;
     conf.off_row = 0;
+    conf.off_col = 0;
 
     if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
     {
@@ -425,6 +427,8 @@ void texProcessKey(){
  * @param key Input keystroke (arrow)
  */
 void texNavCursor(int key){
+    erow *row = (conf.cur_y >= conf.n_rows) ? NULL : &conf.row[conf.cur_y];
+
     switch(key){
         case ARR_UP:
             if (conf.cur_y != 0)
@@ -448,14 +452,21 @@ void texNavCursor(int key){
             break;
 
         case ARR_RIGHT:
-            if (conf.cur_x != conf.dispCols - 1)
+            if (row && conf.cur_x < row -> size)
             {
-                ++conf.cur_x;
+                conf.cur_x++;
             }
-            
             break;
 
     }
+
+    row = (conf.cur_y >= conf.n_rows) ? NULL : &conf.row[conf.cur_y];
+    int row_len = row ? row->size : 0;
+    if (conf.cur_x > row_len)
+    {
+        conf.cur_x = row_len;
+    }
+
 }
 
 /**
@@ -476,7 +487,8 @@ void texDispRefresh(){
     texDrawLine(&ab);
 
     char cur_buf[64];
-    snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", (conf.cur_y - conf.off_row) + 1, conf.cur_x + 1);
+    snprintf(cur_buf, sizeof(cur_buf), "\x1b[%d;%dH", (conf.cur_y - conf.off_row) + 1,
+                                            (conf.cur_x - conf.off_col) + 1);
     memBufAppend(&ab, cur_buf, strlen(cur_buf));
 
     memBufAppend(&ab,"\x1b[?25h",6);
@@ -525,12 +537,18 @@ void texDrawLine(struct memBuf *ab){
         }
     }
     else {
-        int len = conf.row[fp_row].size;
+        int len = conf.row[fp_row].size - conf.off_col;
+
+        if (len < 0)
+        {
+            len = 0;
+        }
+
         if (len > conf.dispCols)
         {
             len = conf.dispCols;
         }
-        memBufAppend(ab, conf.row[fp_row].chars, len);
+        memBufAppend(ab, &conf.row[fp_row].chars[conf.off_col], len);
     }
 
     memBufAppend(ab, "\x1b[K", 3);
@@ -598,5 +616,15 @@ void editorScroll(){
     if (conf.cur_y >= conf.off_row + conf.dispRows)
     {
         conf.off_row = conf.cur_y - conf.dispRows + 1;
+    }
+
+    if (conf.cur_x < conf.off_col)
+    {
+        conf.off_col = conf.cur_x;
+    }
+
+    if (conf.cur_x >= conf.off_col + conf.dispCols)
+    {
+        conf.off_col = conf.cur_x - conf.dispCols + 1;
     }
 }
