@@ -550,21 +550,19 @@ void editorOpen(char *filename){
     size_t line_cap = 0;
     ssize_t line_len;
 
-    line_len = getline(&line, &line_cap, fp);
-
-    if (line_len != -1)
-    {
-        while (line_len > 0 && ( line[line_len -1] == '\n' || line[line_len - 1] == '\r') ) {
-            --line_len;
-        }
+    while ((line_len = getline(&line, &line_cap, fp)) != -1) {
+        while (line_len > 0 && (line[line_len - 1] == '\n' ||
+                               line[line_len - 1] == '\r'))
+          line_len--;
         editorAppend(line, line_len);
     }
+
     free(line);
     fclose(fp);
 }
 
 void editorAppend(char *s, size_t len){
-    conf.row = realloc(conf.row, sizeof(erow) * (conf.n_rows + 1) )
+    conf.row = realloc(conf.row, sizeof(erow) * (conf.n_rows + 1) );
 
     int at = conf.n_rows;
     conf.row[at].size = len;
