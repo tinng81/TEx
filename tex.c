@@ -430,7 +430,10 @@ void texProcessKey(){
             break;
 
         case END_KEY:
-            conf.cur_x = conf.dispCols - 1;
+            if (conf.cur_y < conf.n_rows)
+            {
+                conf.cur_x = conf.row[conf.cur_y].size;                
+            }
             break;
 
         // TODO: case DEL_KEY
