@@ -104,6 +104,7 @@ void editorRemoveChar();
 void editorRemoveRow(int );
 void editorAppendChar(int , char *, size_t );
 void editorAppendString(erow *, char *, size_t );
+void editorInsertNewLine();
 void editorScroll();
 void editorUpdateRow(erow *);
 int utilCur2Ren(erow *, int );
@@ -503,7 +504,7 @@ void texProcessKey(){
             break;
 
         case '\r':
-            // TODO: case Carriage Return
+            editorInsertNewLine();
             break;
 
         default:
@@ -842,6 +843,27 @@ void editorAppendString(erow *row, char *s, size_t len) {
     row->chars[row->size] = '\0';
     editorUpdateRow(row);
     conf.mod++;
+}
+
+/**
+ * @brief High-level Editor Handling
+ * @details Insert a new line or break into 2 lines
+ */
+void editorInsertNewLine() {
+    if (conf.cur_x == 0)
+    {
+        editorAppendChar(conf.cur_y, "", 0);
+    }
+    else {
+        erow *row = &conf.row[conf.cur_y];
+        editorAppendChar(conf.cur_y + 1, &row->chars[conf.cur_x], row->size - conf.cur_x);
+        row = &conf.row[conf.cur_y];
+        row->size = conf.cur_x;
+        row->chars[row->size] = '\0';
+        editorUpdateRow(row);
+    }
+    conf.cur_y++;
+    conf.cur_x = 0;
 }
 
 /**
