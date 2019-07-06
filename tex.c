@@ -86,17 +86,21 @@ enum navKey {
 void enableRawMode();
 void disableRawMode();
 void terminate(const char *);
+
 int texReadKey();
 void texProcessKey();
 void texDispRefresh();
 void texDrawLine();
-int getWindowSize(int *, int *);
 void texDispInit();
-int getCursorPosition(int *, int *);
+void texNavCursor(int );
+void texDrawStatusBar(struct memBuf *);
+void texDrawStatusMsg(struct memBuf *);
+char texUserPrompt(char *);
+
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
 void memFreeRow(erow *);
-void texNavCursor(int );
+
 void editorOpen(char *);
 void editorSave();
 void editorInputChar(int );
@@ -107,10 +111,12 @@ void editorAppendString(erow *, char *, size_t );
 void editorInsertNewLine();
 void editorScroll();
 void editorUpdateRow(erow *);
-int utilCur2Ren(erow *, int );
-void texDrawStatusBar(struct memBuf *);
+
+int getWindowSize(int *, int *);
+int getCursorPosition(int *, int *);
 void setStatusMessage(const char *, ...);
-void texDrawStatusMsg(struct memBuf *);
+
+int utilCur2Ren(erow *, int );
 void utilCharInsert(erow *, int , int );
 void utilCharDel(erow *, int );
 char *utilRow2Str(int *);
@@ -722,6 +728,47 @@ void texDrawStatusMsg(struct memBuf *ab) {
 }
 
 /**
+ * @brief Draw User-input Prompt
+ * @details Prompt in STT bar
+ * 
+ * @param prompt content
+ * @return buffer
+ */
+char texUserPrompt(char *prompt) {
+    size_t buf_sz = 128;
+    char *buffer = malloc(buf_sz);
+
+    size_t buf_len = 0;
+    buffer[0] = '\0';
+
+    while(1) {
+        setStatusMessage(prompt, buffer);
+        texDispRefresh();
+
+        int c = texReadKey();
+        if (c == '\r')
+        {
+            if (buf_len != 0)
+            {
+                setStatusMessage("");
+                return buffer;
+            }
+        }
+        else if (!iscntrl(c) && c < 128) {
+            if (buf_len == buf_sz - 1)
+            {
+                buf_sz *= 2;
+                buffer = realloc(buffer, buf_sz);
+            }
+
+            buffer[buf_len++] = c;
+            buffer[buf_len] = '\0';
+        }
+    }
+}
+
+
+/**
  * @brief Set Status Message
  * @details stt_msg below Status Bar
  * 
@@ -772,7 +819,7 @@ void editorOpen(char *file_name){
 void editorSave() {
     if (conf.file_name == NULL)
     {
-        return;
+        conf.file_name = texUserPrompt("Save as: %s");
     }
 
     int len;
