@@ -26,7 +26,7 @@
  * @brief Define relevant params
  * @details VER, TTS, Quit mode
 */
-#define TEx_VERSION "1.0.0"
+#define TEx_VERSION "1.0.2"
 #define TEx_VERSION_LAYOUT 3
 #define TABS_TO_SPACES 8
 #define FORCE_QUIT 2
@@ -327,7 +327,7 @@ int texReadKey(){
                 }
             }
         }
-        else if (kNav[0] == '0') {
+        else if (kNav[0] == 'O') {
             switch (kNav[1]){
                 case 'H': return HOME_KEY;
                 case 'F': return END_KEY;
@@ -574,8 +574,9 @@ void texDispRefresh(){
 
     struct memBuf ab = BUF_INIT;
 
-    memBufAppend(&ab,"\x1b[?25l",4);
-    memBufAppend(&ab,"\x1b[1;1H",3);
+    memBufAppend(&ab,"\x1b[?25l",6);
+    // FIXME: [1;1H format error bug for all previous versions
+    memBufAppend(&ab,"\x1b[H",3);
 
     texDrawLine(&ab);
     texDrawStatusBar(&ab);
