@@ -95,7 +95,7 @@ void texDispInit();
 void texNavCursor(int );
 void texDrawStatusBar(struct memBuf *);
 void texDrawStatusMsg(struct memBuf *);
-char texUserPrompt(char *);
+char *texUserPrompt(char *);
 
 void memBufAppend(struct memBuf *, const char *, int );
 void memBufFree(struct memBuf *);
@@ -734,7 +734,7 @@ void texDrawStatusMsg(struct memBuf *ab) {
  * @param prompt content
  * @return buffer
  */
-char texUserPrompt(char *prompt) {
+char *texUserPrompt(char *prompt) {
     size_t buf_sz = 128;
     char *buffer = malloc(buf_sz);
 
@@ -746,8 +746,21 @@ char texUserPrompt(char *prompt) {
         texDispRefresh();
 
         int c = texReadKey();
-        if (c == '\r')
+
+        if (c == DEL_KEY || c == CTRL_KEY('h') || c == BKSP_KEY)
         {
+            if (buf_len != 0)
+            {
+                buffer[--buf_len] = '\0';
+            }
+        }
+        else if (c == '\x1b')
+        {
+            setStatusMessage("");
+            free(buffer);
+            return NULL;
+        }
+        else if (c == '\r') {
             if (buf_len != 0)
             {
                 setStatusMessage("");
@@ -819,7 +832,13 @@ void editorOpen(char *file_name){
 void editorSave() {
     if (conf.file_name == NULL)
     {
-        conf.file_name = texUserPrompt("Save as: %s");
+        conf.file_name = texUserPrompt("Save as: %s (<ESC> to cancel)");
+
+        if (conf.file_name == NULL)
+        {
+            setStatusMessage("Save cancelled");
+            return;
+        }
     }
 
     int len;
