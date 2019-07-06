@@ -102,9 +102,10 @@ void editorSave();
 void editorInputChar(int );
 void editorRemoveChar();
 void editorRemoveRow(int );
-void editorAppend(char *, size_t );
+void editorAppendChar(int , char *, size_t );
+void editorAppendString(erow *, char *, size_t );
 void editorScroll();
-void editorUpdate(erow *);
+void editorUpdateRow(erow *);
 int utilCur2Ren(erow *, int );
 void texDrawStatusBar(struct memBuf *);
 void setStatusMessage(const char *, ...);
@@ -755,7 +756,7 @@ void editorOpen(char *file_name){
         while (line_len > 0 && (line[line_len - 1] == '\n' ||
                                line[line_len - 1] == '\r'))
           line_len--;
-        editorAppend(line, line_len);
+        editorAppendChar(conf.n_rows, line, line_len);
     }
 
     free(line);
@@ -804,10 +805,15 @@ void editorSave() {
  * @param s Line from file
  * @param len Line Length
  */
-void editorAppend(char *s, size_t len){
-    conf.row = realloc(conf.row, sizeof(erow) * (conf.n_rows + 1) );
+void editorAppendChar(int at, char *s, size_t len){
+    if (at < 0 || at > conf.n_rows)
+    {
+        return;
+    }
 
-    int at = conf.n_rows;
+    conf.row = realloc(conf.row, sizeof(erow) * (conf.n_rows + 1) );
+    memmove(&conf.row[at + 1], &conf.row[at], sizeof(erow) * (conf.n_rows - at) );
+
     conf.row[at].size = len;
     conf.row[at].chars = malloc (len + 1);
     memcpy(conf.row[at].chars, s, len);
@@ -815,9 +821,26 @@ void editorAppend(char *s, size_t len){
     
     conf.row[at].ren_sz = 0;
     conf.row[at].render = NULL;
-    editorUpdate(&conf.row[at]);
+    editorUpdateRow(&conf.row[at]);
 
     conf.n_rows++;
+    conf.mod++;
+}
+
+/**
+ * @brief High-level Editor Handling
+ * @details Append entire row of char, i.e. String
+ * 
+ * @param erow Current Row Struct
+ * @param s Append String Pointer
+ * @param len String Length
+ */
+void editorAppendString(erow *row, char *s, size_t len) {
+    row->chars = realloc(row->chars, row->size + len + 1);
+    memcpy(&row->chars[row->size], s, len);
+    row->size += len;
+    row->chars[row->size] = '\0';
+    editorUpdateRow(row);
     conf.mod++;
 }
 
@@ -861,7 +884,7 @@ void editorScroll(){
  * 
  * @param row File Input line
  */
-void editorUpdate(erow *row) {
+void editorUpdateRow(erow *row) {
     int tabs = 0;
     int i;
 
@@ -904,7 +927,7 @@ void editorUpdate(erow *row) {
 void editorInputChar(int c) {
     if (conf.cur_y == conf.n_rows)
     {
-        editorAppend("", 0);
+        editorAppendChar(conf.n_rows,"", 0);
     }
     utilCharInsert(&conf.row[conf.cur_y], conf.cur_x, c);
     ++conf.cur_x;
@@ -920,12 +943,23 @@ void editorRemoveChar() {
         return;
     }
 
+    if (conf.cur_x == 0 && conf.cur_y == 0)
+    {
+        return;
+    }
+
     erow *row = &conf.row[conf.cur_y];
 
     if (conf.cur_x > 0)
     {
         utilCharDel(row, conf.cur_x - 1);
         --conf.cur_x;
+    }
+    else {
+        conf.cur_x = conf.row[conf.cur_y - 1].size;
+        editorAppendString(&conf.row[conf.cur_y - 1], row->chars, row->size);
+        editorRemoveRow(conf.cur_y);
+        --conf.cur_y;
     }
 }
 
@@ -988,7 +1022,7 @@ void utilCharInsert(erow *row, int at, int c) {
     memmove(&row->chars[at + 1], &row->chars[at], row->size - at + 1);
     ++row->size;
     row->chars[at] = c;
-    editorUpdate(row);
+    editorUpdateRow(row);
     conf.mod++;
 }
 
@@ -1007,7 +1041,7 @@ void utilCharDel(erow *row, int at) {
 
     memmove(&row->chars[at], &row->chars[at + 1], row->size -at);
     row->size--;
-    editorUpdate(row);
+    editorUpdateRow(row);
     conf.mod++;
 }
 
