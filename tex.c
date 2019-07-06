@@ -16,33 +16,44 @@
 #include <fcntl.h>
 
 /**
- * @brief Define Keys
- * @details <Ctrl-k>
+ * @brief Define Buffer
+ * @details For input Keystroke
 */
 #define CTRL_KEY(k) ( k & 0x1f )
 #define BUF_INIT {NULL, 0}
 
-#define TEx_VERSION "0.0.1"
+/**
+ * @brief Define relevant params
+ * @details VER, TTS, Quit mode
+*/
+#define TEx_VERSION "1.0.0"
 #define TEx_VERSION_LAYOUT 3
 #define TABS_TO_SPACES 8
 #define FORCE_QUIT 2
 
+/**
+ * @brief Define Compiler FLAG
+ * @details Cross-platform compatibility
+*/
 #define _DEFAULT_SOURCE
 #define _BSD_SOURCE
 #define _GNU_SOURCE
 
 /**
  * @brief Terminal Struct
- * @details Config, Line Data
+ * @details Line Data Structure
  */
 typedef struct erow {
     int size;
     int ren_sz;
     char *chars;
     char *render;
-
 } erow;
 
+/**
+ * @brief Terminal Struct
+ * @details Configuration
+*/
 struct texConfig {
     int dispRows;
     int dispCols;
@@ -61,10 +72,19 @@ struct texConfig {
 };
 struct texConfig conf; // Global scope
 
+/**
+ * @brief Define memory struct
+ * @details Memory Buffer for input
+*/
 struct memBuf {
     char *b;
     int len;
 };
+
+/**
+ * @brief Control Key Enumerator
+ * @details Mgmt. & Navigation keystrokes
+*/
 enum navKey {
     BKSP_KEY = 127,
     ARR_UP = 1000, // arbitrary, out of ASCII & CTRL range
@@ -78,44 +98,53 @@ enum navKey {
     DEL_KEY,
 };
 
-
-
 /**
  * @brief Function Prototypes
+ * @details TEx general API
  */
-void enableRawMode();
-void disableRawMode();
-void terminate(const char *);
-
+void texDispInit();
+void texRawEnable();
+void texRawDisable();
+void texTerminate(const char *);
 int texReadKey();
+int texGetWindowsSize(int *, int *);
+int texGetCursorPosition(int *, int *);
 void texProcessKey();
+void texNavCursor(int );
 void texDispRefresh();
 void texDrawLine();
-void texDispInit();
-void texNavCursor(int );
 void texDrawStatusBar(struct memBuf *);
 void texDrawStatusMsg(struct memBuf *);
 char *texUserPrompt(char *);
+void texSetStatusMessage(const char *, ...);
 
-void memBufAppend(struct memBuf *, const char *, int );
-void memBufFree(struct memBuf *);
-void memFreeRow(erow *);
-
+/**
+ * @brief Function Prototypes
+ * @details TEx - editor API
+*/
 void editorOpen(char *);
 void editorSave();
-void editorInputChar(int );
-void editorRemoveChar();
-void editorRemoveRow(int );
 void editorAppendChar(int , char *, size_t );
 void editorAppendString(erow *, char *, size_t );
 void editorInsertNewLine();
 void editorScroll();
 void editorUpdateRow(erow *);
+void editorInputChar(int );
+void editorRemoveChar();
+void editorRemoveRow(int );
 
-int getWindowSize(int *, int *);
-int getCursorPosition(int *, int *);
-void setStatusMessage(const char *, ...);
+/**
+ * @brief Function Prototypes
+ * @details TEx - Memory control
+*/
+void memBufAppend(struct memBuf *, const char *, int );
+void memBufFree(struct memBuf *);
+void memFreeRow(erow *);
 
+/**
+ * @brief Function Prototypes
+ * @details TEx - Miscellaneous Utilities
+*/
 int utilCur2Ren(erow *, int );
 void utilCharInsert(erow *, int , int );
 void utilCharDel(erow *, int );
@@ -126,17 +155,16 @@ char *utilRow2Str(int *);
  * @brief main
  * @details int main
  */
-int main(int argc, char const *argv[])
-{
+int main(int argc, char const *argv[]){
 
-    enableRawMode();
+    texRawEnable();
     texDispInit();
     if (argc >= 2)
     {
         editorOpen( (char *) argv[1]);
     }
 
-    setStatusMessage("HELP: Ctrl-S to save | Ctrl-Q to quit");
+    texSetStatusMessage("HELP: Ctrl-S to save | Ctrl-Q to quit");
 
     while(1){
         texDispRefresh();
@@ -163,9 +191,9 @@ void texDispInit(){
     conf.msg_time = 0;
     conf.mod = 0;
 
-    if (getWindowSize(&conf.dispRows, &conf.dispCols) == -1)
+    if (texGetWindowsSize(&conf.dispRows, &conf.dispCols) == -1)
     {
-        terminate("getWindowSize");
+        texTerminate("texGetWindowsSize");
     }
 
     conf.dispRows -= 2;
@@ -175,14 +203,14 @@ void texDispInit(){
  * @brief Terminal API
  * @details Enable Raw Input
  */
-void enableRawMode() {
+void texRawEnable() {
     // tcgetattr(STDIN_FILENO, &orig_termios);
     if (tcgetattr(STDIN_FILENO, &conf.orig_termios) == -1)
     {
-        terminate("tcgetattr");
+        texTerminate("tcgetattr");
     }
 
-    atexit(disableRawMode);
+    atexit(texRawDisable);
 
     struct termios raw = conf.orig_termios;
     raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | ISTRIP);  
@@ -196,7 +224,7 @@ void enableRawMode() {
     // tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1)
     {
-        terminate("tcsetattr");
+        texTerminate("tcsetattr");
     }
 }
 
@@ -204,12 +232,12 @@ void enableRawMode() {
  * @brief Terminal API
  * @details Disable Raw Input
  */
-void disableRawMode() {
+void texRawDisable() {
   // tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
 
   if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &conf.orig_termios) == -1)
   {
-      terminate("tcsetattr");
+      texTerminate("tcsetattr");
   }
 }
 
@@ -219,7 +247,7 @@ void disableRawMode() {
  * 
  * @param s Error Message
  */
-void terminate(const char *s){
+void texTerminate(const char *s){
     write(STDIN_FILENO,"\x1b[2J",4);
     write(STDIN_FILENO,"\x1b[1;1H",3);
 
@@ -238,7 +266,7 @@ int texReadKey(){
     while( (nChar = read(STDIN_FILENO, &c, 1) ) != 1 ){
         if (nChar == -1 && errno != EAGAIN) // Again, Cygwin compatibility
         {//
-            terminate("read");
+            texTerminate("read");
         }
     }
 
@@ -322,7 +350,7 @@ int texReadKey(){
  * 
  * @return struct winsize {row, col}
  */
-int getWindowSize(int *rs, int *cs){
+int texGetWindowsSize(int *rs, int *cs){
     struct winsize sWinSize;
 
     if (ioctl(STDIN_FILENO, TIOCGWINSZ, &sWinSize) == -1 || sWinSize.ws_col == 0)
@@ -331,7 +359,7 @@ int getWindowSize(int *rs, int *cs){
         {
             return -1;
         }
-        return getCursorPosition(rs, cs);
+        return texGetCursorPosition(rs, cs);
     }
     else {
         *cs = sWinSize.ws_col;
@@ -349,7 +377,7 @@ int getWindowSize(int *rs, int *cs){
  * 
  * @return valid/invalid: 0/-1
  */
-int getCursorPosition(int *rs, int *cs){
+int texGetCursorPosition(int *rs, int *cs){
     char buffer[32];
     unsigned int i = 0;
 
@@ -387,48 +415,6 @@ int getCursorPosition(int *rs, int *cs){
 }
 
 /**
- * @brief Parser
- * @details Append String
- * 
- * @param memBuf Dynamic-string Struct
- * @param s Input String
- * @param len String Length
- */
-void memBufAppend(struct memBuf *abuf, const char *s, int len){
-    char *new = realloc(abuf -> b, abuf -> len + len);
-
-    if (new == NULL)
-    {
-        return;
-    }
-
-    memcpy(&new[abuf->len], s, len);
-    abuf -> b = new;
-    abuf -> len += len;
-}
-
-/**
- * @brief Parser
- * @details Append String
- * 
- * @param memBuf Dynamic-string Struct
- */
-void memBufFree(struct memBuf *abuf){
-    free(abuf->b);
-}
-
-/**
- * @brief Row control
- * @details Free Memory at Delete
- * 
- * @param row Current Row
- */
-void memFreeRow(erow *row) {
-    free(row->render);
-    free(row->chars);
-}
-
-/**
  * @brief Input Handling
  * @details Comprise keystrokes
  */
@@ -440,7 +426,7 @@ void texProcessKey(){
         case CTRL_KEY('q'):
             if (conf.mod && confirm_exit > 0)
             {
-                setStatusMessage("WARNING ! File has unsaved changes. Press Ctrl-Q again (%d) to confirm quit", confirm_exit);
+                texSetStatusMessage("WARNING ! File has unsaved changes. Press Ctrl-Q again (%d) to confirm quit", confirm_exit);
                 --confirm_exit;
                 return;
             }
@@ -574,7 +560,6 @@ void texNavCursor(int key){
     {
         conf.cur_x = row_len;
     }
-
 }
 
 /**
@@ -724,7 +709,6 @@ void texDrawStatusMsg(struct memBuf *ab) {
     {
         memBufAppend(ab, conf.stt_msg, msg_len);
     }
-
 }
 
 /**
@@ -742,7 +726,7 @@ char *texUserPrompt(char *prompt) {
     buffer[0] = '\0';
 
     while(1) {
-        setStatusMessage(prompt, buffer);
+        texSetStatusMessage(prompt, buffer);
         texDispRefresh();
 
         int c = texReadKey();
@@ -756,14 +740,14 @@ char *texUserPrompt(char *prompt) {
         }
         else if (c == '\x1b')
         {
-            setStatusMessage("");
+            texSetStatusMessage("");
             free(buffer);
             return NULL;
         }
         else if (c == '\r') {
             if (buf_len != 0)
             {
-                setStatusMessage("");
+                texSetStatusMessage("");
                 return buffer;
             }
         }
@@ -780,14 +764,13 @@ char *texUserPrompt(char *prompt) {
     }
 }
 
-
 /**
  * @brief Set Status Message
  * @details stt_msg below Status Bar
  * 
  * @param fmt variadic func
  */
-void setStatusMessage(const char *fmt, ...) {
+void texSetStatusMessage(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(conf.stt_msg, sizeof(conf.stt_msg), fmt, ap);
@@ -806,7 +789,7 @@ void editorOpen(char *file_name){
     FILE *fp = fopen(file_name, "r");
     if (!fp)
     {
-        terminate("fopen");
+        texTerminate("fopen");
     }
 
     char *line = NULL;
@@ -836,7 +819,7 @@ void editorSave() {
 
         if (conf.file_name == NULL)
         {
-            setStatusMessage("Save cancelled");
+            texSetStatusMessage("Save cancelled");
             return;
         }
     }
@@ -855,14 +838,14 @@ void editorSave() {
                 close(fp);
                 free(buffer);
                 conf.mod = 0;
-                setStatusMessage("%d bytes written to file", len);
+                texSetStatusMessage("%d bytes written to file", len);
                 return;
             }
         }
         close(fp);
     }
     free(buffer);
-    setStatusMessage("Cannot save ! I/O Error: %s", strerror(errno));
+    texSetStatusMessage("Cannot save ! I/O Error: %s", strerror(errno));
 }
 
 /**
@@ -1067,6 +1050,48 @@ void editorRemoveRow(int at) {
     memmove(&conf.row[at], &conf.row[at + 1], sizeof(erow) * (conf.n_rows - at - 1) );
     --conf.n_rows;
     conf.mod++;
+}
+
+/**
+ * @brief Parser
+ * @details Append String
+ * 
+ * @param memBuf Dynamic-string Struct
+ * @param s Input String
+ * @param len String Length
+ */
+void memBufAppend(struct memBuf *abuf, const char *s, int len){
+    char *new = realloc(abuf -> b, abuf -> len + len);
+
+    if (new == NULL)
+    {
+        return;
+    }
+
+    memcpy(&new[abuf->len], s, len);
+    abuf -> b = new;
+    abuf -> len += len;
+}
+
+/**
+ * @brief Parser
+ * @details Append String
+ * 
+ * @param memBuf Dynamic-string Struct
+ */
+void memBufFree(struct memBuf *abuf){
+    free(abuf->b);
+}
+
+/**
+ * @brief Row control
+ * @details Free Memory at Delete
+ * 
+ * @param row Current Row
+ */
+void memFreeRow(erow *row) {
+    free(row->render);
+    free(row->chars);
 }
 
 /**
